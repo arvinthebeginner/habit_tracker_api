@@ -1,6 +1,15 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth.middleware');
-const { create, list, getOne, update, remove, checkin, getCheckins } = require('../controllers/habit.controller');
+const {
+  create,
+  list,
+  getOne,
+  update,
+  remove,
+  checkin,
+  getCheckins,
+  stats,
+} = require('../controllers/habit.controller');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -11,5 +20,6 @@ router.put('/:id', update);
 router.delete('/:id', remove);
 router.post('/:id/checkin', checkin);
 router.get('/:id/checkins', getCheckins);
+router.get('/:id/stats', stats);
 
 module.exports = router;

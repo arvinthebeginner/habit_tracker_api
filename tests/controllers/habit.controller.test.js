@@ -180,3 +180,40 @@ describe('GET /api/habits/:id/checkins', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('GET /api/habits/:id/stats', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('returns streak plus weekly and monthly summaries', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
+    findCheckinsByHabit.mockResolvedValue([{ id: 'c1', habit_id: 'h1', date: today, completed: true }]);
+
+    const res = await request(app).get('/api/habits/h1/stats').set(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      streak: 1,
+      weekly: { days: 7, completed: 1 },
+      monthly: { days: 30, completed: 1 },
+    });
+  });
+
+  test('returns zeroed stats when there are no check-ins', async () => {
+    findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
+    findCheckinsByHabit.mockResolvedValue([]);
+
+    const res = await request(app).get('/api/habits/h1/stats').set(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body.streak).toBe(0);
+  });
+
+  test('returns 404 when the habit belongs to another user', async () => {
+    findHabitById.mockResolvedValue(null);
+
+    const res = await request(app).get('/api/habits/h1/stats').set(auth);
+
+    expect(res.status).toBe(404);
+  });
+});

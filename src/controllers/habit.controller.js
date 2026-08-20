@@ -6,6 +6,8 @@ const {
   deleteHabit,
 } = require('../models/habit.model');
 const { createCheckin, findCheckinsByHabit } = require('../models/checkin.model');
+const { calculateStreak } = require('../utils/streak.util');
+const { summarizeCompletions } = require('../utils/stats.util');
 
 async function create(req, res, next) {
   try {
@@ -103,4 +105,25 @@ async function getCheckins(req, res, next) {
   }
 }
 
-module.exports = { create, list, getOne, update, remove, checkin, getCheckins };
+async function stats(req, res, next) {
+  try {
+    const habit = await findHabitById(req.params.id, req.user.id);
+    if (!habit) {
+      const err = new Error('Habit not found');
+      err.status = 404;
+      throw err;
+    }
+
+    const checkins = await findCheckinsByHabit(habit.id);
+
+    res.status(200).json({
+      streak: calculateStreak(checkins),
+      weekly: summarizeCompletions(checkins, 7),
+      monthly: summarizeCompletions(checkins, 30),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { create, list, getOne, update, remove, checkin, getCheckins, stats };
