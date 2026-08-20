@@ -1,5 +1,7 @@
 process.env.JWT_SECRET = 'test-secret';
 jest.mock('../../src/models/habit.model');
+jest.mock('../../src/models/checkin.model');
+const { createCheckin, findCheckinsByHabit } = require('../../src/models/checkin.model');
 const {
   createHabit,
   findHabitsByUser,
@@ -129,5 +131,52 @@ describe('DELETE /api/habits/:id', () => {
   test('returns 401 without a token', async () => {
     const res = await request(app).delete('/api/habits/h1');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/habits/:id/checkin', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('returns 201 with the created check-in for today', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
+    createCheckin.mockResolvedValue({ id: 'c1', habit_id: 'h1', date: today, completed: true });
+
+    const res = await request(app).post('/api/habits/h1/checkin').set(auth);
+
+    expect(res.status).toBe(201);
+    expect(createCheckin).toHaveBeenCalledWith({ habitId: 'h1', date: today, completed: true });
+  });
+
+  test('returns 404 when the habit belongs to another user', async () => {
+    findHabitById.mockResolvedValue(null);
+
+    const res = await request(app).post('/api/habits/h1/checkin').set(auth);
+
+    expect(res.status).toBe(404);
+    expect(createCheckin).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/habits/:id/checkins', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('returns 200 with the check-in history', async () => {
+    const checkins = [{ id: 'c1', habit_id: 'h1', date: '2026-08-20', completed: true }];
+    findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
+    findCheckinsByHabit.mockResolvedValue(checkins);
+
+    const res = await request(app).get('/api/habits/h1/checkins').set(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(checkins);
+  });
+
+  test('returns 404 when the habit is not found', async () => {
+    findHabitById.mockResolvedValue(null);
+
+    const res = await request(app).get('/api/habits/h1/checkins').set(auth);
+
+    expect(res.status).toBe(404);
   });
 });
