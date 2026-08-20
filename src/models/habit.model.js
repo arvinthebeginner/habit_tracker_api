@@ -24,4 +24,37 @@ async function findHabitsByUser(userId) {
   return data;
 }
 
-module.exports = { createHabit, findHabitsByUser };
+async function findHabitById(habitId, userId) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('habits')
+    .select('*')
+    .eq('id', habitId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function updateHabit(habitId, userId, updates) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('habits')
+    .update(updates)
+    .eq('id', habitId)
+    .eq('user_id', userId)
+    .select()
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function deleteHabit(habitId, userId) {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.from('habits').delete().eq('id', habitId).eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
+module.exports = { createHabit, findHabitsByUser, findHabitById, updateHabit, deleteHabit };

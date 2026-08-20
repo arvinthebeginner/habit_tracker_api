@@ -1,6 +1,12 @@
 process.env.JWT_SECRET = 'test-secret';
 jest.mock('../../src/models/habit.model');
-const { createHabit, findHabitsByUser } = require('../../src/models/habit.model');
+const {
+  createHabit,
+  findHabitsByUser,
+  findHabitById,
+  updateHabit,
+  deleteHabit,
+} = require('../../src/models/habit.model');
 const { generateToken } = require('../../src/utils/jwt.util');
 const request = require('supertest');
 const app = require('../../src/app');
@@ -59,6 +65,69 @@ describe('GET /api/habits', () => {
 
   test('returns 401 without a token', async () => {
     const res = await request(app).get('/api/habits');
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/habits/:id', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('returns 200 with the habit', async () => {
+    const habit = { id: 'h1', user_id: 'u1', name: 'Olahraga' };
+    findHabitById.mockResolvedValue(habit);
+
+    const res = await request(app).get('/api/habits/h1').set(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(habit);
+    expect(findHabitById).toHaveBeenCalledWith('h1', 'u1');
+  });
+
+  test('returns 404 when the habit is not found', async () => {
+    findHabitById.mockResolvedValue(null);
+
+    const res = await request(app).get('/api/habits/h1').set(auth);
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PUT /api/habits/:id', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('returns 200 with the updated habit', async () => {
+    const updated = { id: 'h1', user_id: 'u1', name: 'Lari pagi' };
+    updateHabit.mockResolvedValue(updated);
+
+    const res = await request(app).put('/api/habits/h1').set(auth).send({ name: 'Lari pagi' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(updated);
+  });
+
+  test('returns 404 when the habit belongs to another user', async () => {
+    updateHabit.mockResolvedValue(null);
+
+    const res = await request(app).put('/api/habits/h1').set(auth).send({ name: 'Lari pagi' });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/habits/:id', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('returns 204 with an empty body', async () => {
+    deleteHabit.mockResolvedValue();
+
+    const res = await request(app).delete('/api/habits/h1').set(auth);
+
+    expect(res.status).toBe(204);
+    expect(deleteHabit).toHaveBeenCalledWith('h1', 'u1');
+  });
+
+  test('returns 401 without a token', async () => {
+    const res = await request(app).delete('/api/habits/h1');
     expect(res.status).toBe(401);
   });
 });

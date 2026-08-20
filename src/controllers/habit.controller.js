@@ -1,4 +1,10 @@
-const { createHabit, findHabitsByUser } = require('../models/habit.model');
+const {
+  createHabit,
+  findHabitsByUser,
+  findHabitById,
+  updateHabit,
+  deleteHabit,
+} = require('../models/habit.model');
 
 async function create(req, res, next) {
   try {
@@ -25,4 +31,42 @@ async function list(req, res, next) {
   }
 }
 
-module.exports = { create, list };
+async function getOne(req, res, next) {
+  try {
+    const habit = await findHabitById(req.params.id, req.user.id);
+    if (!habit) {
+      const err = new Error('Habit not found');
+      err.status = 404;
+      throw err;
+    }
+    res.status(200).json(habit);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function update(req, res, next) {
+  try {
+    const { name, category, frequency } = req.body;
+    const habit = await updateHabit(req.params.id, req.user.id, { name, category, frequency });
+    if (!habit) {
+      const err = new Error('Habit not found');
+      err.status = 404;
+      throw err;
+    }
+    res.status(200).json(habit);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function remove(req, res, next) {
+  try {
+    await deleteHabit(req.params.id, req.user.id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { create, list, getOne, update, remove };
