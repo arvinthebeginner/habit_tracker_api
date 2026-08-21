@@ -5,7 +5,11 @@ const {
   updateHabit,
   deleteHabit,
 } = require('../models/habit.model');
-const { createCheckin, findCheckinsByHabit } = require('../models/checkin.model');
+const {
+  createCheckin,
+  findCheckinByHabitAndDate,
+  findCheckinsByHabit,
+} = require('../models/checkin.model');
 const { calculateStreak } = require('../utils/streak.util');
 const { summarizeCompletions } = require('../utils/stats.util');
 const { today } = require('../utils/date.util');
@@ -83,6 +87,13 @@ async function checkin(req, res, next) {
     }
 
     const date = today();
+    const existing = await findCheckinByHabitAndDate(habit.id, date);
+    if (existing) {
+      const err = new Error('Habit already checked in for today');
+      err.status = 409;
+      throw err;
+    }
+
     const record = await createCheckin({ habitId: habit.id, date, completed: true });
     res.status(201).json(record);
   } catch (err) {

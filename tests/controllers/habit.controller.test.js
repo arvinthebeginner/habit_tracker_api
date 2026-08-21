@@ -1,7 +1,11 @@
 process.env.JWT_SECRET = 'test-secret';
 jest.mock('../../src/models/habit.model');
 jest.mock('../../src/models/checkin.model');
-const { createCheckin, findCheckinsByHabit } = require('../../src/models/checkin.model');
+const {
+  createCheckin,
+  findCheckinByHabitAndDate,
+  findCheckinsByHabit,
+} = require('../../src/models/checkin.model');
 const {
   createHabit,
   findHabitsByUser,
@@ -141,12 +145,34 @@ describe('POST /api/habits/:id/checkin', () => {
   test('returns 201 with the created check-in for today', async () => {
     const today = currentDate();
     findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
+    findCheckinByHabitAndDate.mockResolvedValue(null);
     createCheckin.mockResolvedValue({ id: 'c1', habit_id: 'h1', date: today, completed: true });
 
     const res = await request(app).post('/api/habits/h1/checkin').set(auth);
 
     expect(res.status).toBe(201);
     expect(createCheckin).toHaveBeenCalledWith({ habitId: 'h1', date: today, completed: true });
+  });
+
+  test('returns 409 and does not insert twice when today is already checked in', async () => {
+    const today = currentDate();
+    findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
+    findCheckinByHabitAndDate.mockResolvedValue({ id: 'c1', habit_id: 'h1', date: today, completed: true });
+
+    const res = await request(app).post('/api/habits/h1/checkin').set(auth);
+
+    expect(res.status).toBe(409);
+    expect(createCheckin).not.toHaveBeenCalled();
+  });
+
+  test('looks for an existing check-in on today only', async () => {
+    findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
+    findCheckinByHabitAndDate.mockResolvedValue(null);
+    createCheckin.mockResolvedValue({ id: 'c1' });
+
+    await request(app).post('/api/habits/h1/checkin').set(auth);
+
+    expect(findCheckinByHabitAndDate).toHaveBeenCalledWith('h1', currentDate());
   });
 
   test('returns 404 when the habit belongs to another user', async () => {

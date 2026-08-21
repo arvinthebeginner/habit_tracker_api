@@ -12,6 +12,19 @@ async function createCheckin({ habitId, date, completed }) {
   return data;
 }
 
+async function findCheckinByHabitAndDate(habitId, date) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('checkins')
+    .select('*')
+    .eq('habit_id', habitId)
+    .eq('date', date)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 async function findCheckinsByHabit(habitId) {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
@@ -24,4 +37,4 @@ async function findCheckinsByHabit(habitId) {
   return data;
 }
 
-module.exports = { createCheckin, findCheckinsByHabit };
+module.exports = { createCheckin, findCheckinByHabitAndDate, findCheckinsByHabit };
