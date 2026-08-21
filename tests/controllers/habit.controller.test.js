@@ -14,7 +14,7 @@ const {
   deleteHabit,
 } = require('../../src/models/habit.model');
 const { generateToken } = require('../../src/utils/jwt.util');
-const { today: currentDate } = require('../../src/utils/date.util');
+const { today: currentDate, shiftDays } = require('../../src/utils/date.util');
 const request = require('supertest');
 const app = require('../../src/app');
 
@@ -260,6 +260,7 @@ describe('GET /api/habits/:id/stats', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       streak: 1,
+      longestStreak: 1,
       weekly: { days: 7, completed: 1 },
       monthly: { days: 30, completed: 1 },
     });
@@ -273,6 +274,21 @@ describe('GET /api/habits/:id/stats', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.streak).toBe(0);
+    expect(res.body.longestStreak).toBe(0);
+  });
+
+  test('reports the longest streak even after it has been broken', async () => {
+    const day = (n) => shiftDays(currentDate(), -n);
+    findHabitById.mockResolvedValue({ id: HABIT_ID, user_id: 'u1' });
+    findCheckinsByHabit.mockResolvedValue(
+      [0, 1, 5, 6, 7, 8].map((n) => ({ habit_id: HABIT_ID, date: day(n), completed: true }))
+    );
+
+    const res = await request(app).get(`/api/habits/${HABIT_ID}/stats`).set(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body.streak).toBe(2);
+    expect(res.body.longestStreak).toBe(4);
   });
 
   test('returns 404 when the habit belongs to another user', async () => {

@@ -10,7 +10,7 @@ const {
   findCheckinByHabitAndDate,
   findCheckinsByHabit,
 } = require('../models/checkin.model');
-const { calculateStreak } = require('../utils/streak.util');
+const { calculateStreak, calculateLongestStreak } = require('../utils/streak.util');
 const { summarizeCompletions } = require('../utils/stats.util');
 const { today } = require('../utils/date.util');
 const { validateHabitInput, validateHabitUpdate } = require('../utils/validate.util');
@@ -126,6 +126,7 @@ async function stats(req, res, next) {
 
     res.status(200).json({
       streak: calculateStreak(checkins),
+      longestStreak: calculateLongestStreak(checkins),
       weekly: summarizeCompletions(checkins, 7),
       monthly: summarizeCompletions(checkins, 30),
     });
