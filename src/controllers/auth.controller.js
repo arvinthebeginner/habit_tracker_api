@@ -1,15 +1,11 @@
 const { createUser, findUserByEmail } = require('../models/user.model');
 const { hashPassword, comparePassword } = require('../utils/password.util');
 const { generateToken } = require('../utils/jwt.util');
+const { validateRegistration, validateCredentials } = require('../utils/validate.util');
 
 async function register(req, res, next) {
   try {
-    const { email, password, name } = req.body;
-    if (!email || !password || !name) {
-      const err = new Error('email, password, and name are required');
-      err.status = 400;
-      throw err;
-    }
+    const { email, password, name } = validateRegistration(req.body);
 
     const existing = await findUserByEmail(email);
     if (existing) {
@@ -29,12 +25,7 @@ async function register(req, res, next) {
 
 async function login(req, res, next) {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      const err = new Error('email and password are required');
-      err.status = 400;
-      throw err;
-    }
+    const { email, password } = validateCredentials(req.body);
 
     const user = await findUserByEmail(email);
     if (!user) {

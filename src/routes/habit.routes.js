@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth.middleware');
+const { validateUuid } = require('../utils/validate.util');
 const {
   create,
   list,
@@ -13,6 +14,17 @@ const {
 
 const router = express.Router();
 router.use(requireAuth);
+
+// Dipasang sekali di sini, berlaku untuk semua route yang memakai :id.
+router.param('id', (req, res, next, id) => {
+  try {
+    validateUuid(id, 'habit id');
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/', create);
 router.get('/', list);
 router.get('/:id', getOne);

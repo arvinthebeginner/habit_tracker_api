@@ -41,6 +41,36 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(409);
   });
 
+  test('rejects a malformed email with 400 before touching the database', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'bukan-email', password: 'secret123', name: 'Arvin' });
+
+    expect(res.status).toBe(400);
+    expect(findUserByEmail).not.toHaveBeenCalled();
+  });
+
+  test('rejects a password shorter than 8 characters with 400', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'arvin@example.com', password: 'pendek', name: 'Arvin' });
+
+    expect(res.status).toBe(400);
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  test('looks up and stores the email in lowercase', async () => {
+    createUser.mockResolvedValue({ id: '1', email: 'arvin@example.com', name: 'Arvin' });
+    findUserByEmail.mockResolvedValue(null);
+
+    await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'Arvin@Example.COM', password: 'secret123', name: 'Arvin' });
+
+    expect(findUserByEmail).toHaveBeenCalledWith('arvin@example.com');
+    expect(createUser.mock.calls[0][0].email).toBe('arvin@example.com');
+  });
+
   test('returns 400 when required fields are missing', async () => {
     const res = await request(app).post('/api/auth/register').send({ email: 'arvin@example.com' });
     expect(res.status).toBe(400);
@@ -81,6 +111,21 @@ describe('POST /api/auth/login', () => {
       .send({ email: 'nobody@example.com', password: 'whatever' });
 
     expect(res.status).toBe(401);
+  });
+
+  test('finds the account even when the email casing differs', async () => {
+    findUserByEmail.mockResolvedValue({
+      id: '1',
+      email: 'arvin@example.com',
+      password_hash: await hashPassword('secret123'),
+    });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'ARVIN@example.com', password: 'secret123' });
+
+    expect(res.status).toBe(200);
+    expect(findUserByEmail).toHaveBeenCalledWith('arvin@example.com');
   });
 
   test('returns 400 when credentials are missing', async () => {

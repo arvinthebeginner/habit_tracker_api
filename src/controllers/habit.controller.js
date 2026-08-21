@@ -13,17 +13,13 @@ const {
 const { calculateStreak } = require('../utils/streak.util');
 const { summarizeCompletions } = require('../utils/stats.util');
 const { today } = require('../utils/date.util');
+const { validateHabitInput, validateHabitUpdate } = require('../utils/validate.util');
 
 async function create(req, res, next) {
   try {
-    const { name, category, frequency } = req.body;
-    if (!name || !frequency) {
-      const err = new Error('name and frequency are required');
-      err.status = 400;
-      throw err;
-    }
+    const { name, category, frequency } = validateHabitInput(req.body);
 
-    const habit = await createHabit({ userId: req.user.id, name, category: category || null, frequency });
+    const habit = await createHabit({ userId: req.user.id, name, category, frequency });
     res.status(201).json(habit);
   } catch (err) {
     next(err);
@@ -55,8 +51,8 @@ async function getOne(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { name, category, frequency } = req.body;
-    const habit = await updateHabit(req.params.id, req.user.id, { name, category, frequency });
+    const updates = validateHabitUpdate(req.body);
+    const habit = await updateHabit(req.params.id, req.user.id, updates);
     if (!habit) {
       const err = new Error('Habit not found');
       err.status = 404;
