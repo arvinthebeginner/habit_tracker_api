@@ -8,6 +8,7 @@ const {
 const { createCheckin, findCheckinsByHabit } = require('../models/checkin.model');
 const { calculateStreak } = require('../utils/streak.util');
 const { summarizeCompletions } = require('../utils/stats.util');
+const { today } = require('../utils/date.util');
 
 async function create(req, res, next) {
   try {
@@ -81,8 +82,8 @@ async function checkin(req, res, next) {
       throw err;
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    const record = await createCheckin({ habitId: habit.id, date: today, completed: true });
+    const date = today();
+    const record = await createCheckin({ habitId: habit.id, date, completed: true });
     res.status(201).json(record);
   } catch (err) {
     next(err);

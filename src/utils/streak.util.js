@@ -1,16 +1,17 @@
+const { today, shiftDays } = require('./date.util');
+
 function calculateStreak(checkins) {
   const completedDates = new Set(checkins.filter((c) => c.completed).map((c) => c.date));
-  const toDateStr = (d) => d.toISOString().split('T')[0];
 
-  const cursor = new Date();
-  if (!completedDates.has(toDateStr(cursor))) {
-    cursor.setDate(cursor.getDate() - 1);
+  let cursor = today();
+  if (!completedDates.has(cursor)) {
+    cursor = shiftDays(cursor, -1);
   }
 
   let streak = 0;
-  while (completedDates.has(toDateStr(cursor))) {
+  while (completedDates.has(cursor)) {
     streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = shiftDays(cursor, -1);
   }
 
   return streak;

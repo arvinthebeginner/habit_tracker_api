@@ -10,6 +10,7 @@ const {
   deleteHabit,
 } = require('../../src/models/habit.model');
 const { generateToken } = require('../../src/utils/jwt.util');
+const { today: currentDate } = require('../../src/utils/date.util');
 const request = require('supertest');
 const app = require('../../src/app');
 
@@ -138,7 +139,7 @@ describe('POST /api/habits/:id/checkin', () => {
   afterEach(() => jest.clearAllMocks());
 
   test('returns 201 with the created check-in for today', async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = currentDate();
     findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
     createCheckin.mockResolvedValue({ id: 'c1', habit_id: 'h1', date: today, completed: true });
 
@@ -185,7 +186,7 @@ describe('GET /api/habits/:id/stats', () => {
   afterEach(() => jest.clearAllMocks());
 
   test('returns streak plus weekly and monthly summaries', async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = currentDate();
     findHabitById.mockResolvedValue({ id: 'h1', user_id: 'u1' });
     findCheckinsByHabit.mockResolvedValue([{ id: 'c1', habit_id: 'h1', date: today, completed: true }]);
 

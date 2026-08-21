@@ -1,12 +1,10 @@
-function summarizeCompletions(checkins, days) {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - (days - 1));
-  cutoff.setHours(0, 0, 0, 0);
+const { today, shiftDays } = require('./date.util');
 
-  const completed = checkins.filter((c) => {
-    if (!c.completed) return false;
-    return new Date(c.date) >= cutoff;
-  }).length;
+function summarizeCompletions(checkins, days) {
+  // Window `days` hari mencakup hari ini, jadi batas bawahnya days - 1 hari lalu.
+  const cutoff = shiftDays(today(), -(days - 1));
+
+  const completed = checkins.filter((c) => c.completed && c.date >= cutoff).length;
 
   return { days, completed };
 }

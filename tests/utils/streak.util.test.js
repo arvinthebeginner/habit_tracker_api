@@ -1,9 +1,8 @@
 const { calculateStreak } = require('../../src/utils/streak.util');
+const { today, shiftDays } = require('../../src/utils/date.util');
 
 function daysAgo(n) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().split('T')[0];
+  return shiftDays(today(), -n);
 }
 
 function completedOn(...offsets) {
