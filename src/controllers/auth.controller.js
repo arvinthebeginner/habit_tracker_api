@@ -1,4 +1,4 @@
-const { createUser, findUserByEmail } = require('../models/user.model');
+const { createUser, findUserByEmail, findUserById } = require('../models/user.model');
 const { hashPassword, comparePassword } = require('../utils/password.util');
 const { generateToken } = require('../utils/jwt.util');
 const { validateRegistration, validateCredentials } = require('../utils/validate.util');
@@ -56,4 +56,24 @@ async function login(req, res, next) {
   }
 }
 
-module.exports = { register, login };
+async function me(req, res, next) {
+  try {
+    const user = await findUserById(req.user.id);
+    if (!user) {
+      const err = new Error('Invalid or expired token');
+      err.status = 401;
+      throw err;
+    }
+
+    res.status(200).json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      created_at: user.created_at,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, me };

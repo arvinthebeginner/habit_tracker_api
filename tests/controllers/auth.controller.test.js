@@ -1,7 +1,8 @@
 process.env.JWT_SECRET = 'test-secret';
 jest.mock('../../src/models/user.model');
-const { createUser, findUserByEmail } = require('../../src/models/user.model');
+const { createUser, findUserByEmail, findUserById } = require('../../src/models/user.model');
 const { hashPassword } = require('../../src/utils/password.util');
+const { generateToken } = require('../../src/utils/jwt.util');
 const request = require('supertest');
 const app = require('../../src/app');
 
@@ -131,5 +132,64 @@ describe('POST /api/auth/login', () => {
   test('returns 400 when credentials are missing', async () => {
     const res = await request(app).post('/api/auth/login').send({ email: 'arvin@example.com' });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/auth/me', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  const auth = { Authorization: `Bearer ${generateToken({ user_id: 'u1' })}` };
+
+  test('returns 200 with the account behind the token', async () => {
+    const user = { id: 'u1', email: 'arvin@example.com', name: 'Arvin', created_at: '2026-08-01T00:00:00Z' };
+    findUserById.mockResolvedValue(user);
+
+    const res = await request(app).get('/api/auth/me').set(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(user);
+  });
+
+  test('looks the user up by the id inside the token', async () => {
+    findUserById.mockResolvedValue({ id: 'u1' });
+
+    await request(app).get('/api/auth/me').set(auth);
+
+    expect(findUserById).toHaveBeenCalledWith('u1');
+  });
+
+  test('never leaks the password hash even if the model returns one', async () => {
+    findUserById.mockResolvedValue({
+      id: 'u1',
+      email: 'arvin@example.com',
+      name: 'Arvin',
+      password_hash: '$2b$10$hashyanguharusnyatidakpernahkeluar',
+    });
+
+    const res = await request(app).get('/api/auth/me').set(auth);
+
+    expect(JSON.stringify(res.body)).not.toMatch(/password|\$2b\$/);
+  });
+
+  test('returns 401 when the token is valid but the account is gone', async () => {
+    findUserById.mockResolvedValue(null);
+
+    const res = await request(app).get('/api/auth/me').set(auth);
+
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 401 without a token', async () => {
+    const res = await request(app).get('/api/auth/me');
+
+    expect(res.status).toBe(401);
+    expect(findUserById).not.toHaveBeenCalled();
+  });
+
+  test('returns 401 for a token signed with another secret', async () => {
+    const res = await request(app).get('/api/auth/me').set({ Authorization: 'Bearer bukan.token.asli' });
+
+    expect(res.status).toBe(401);
+    expect(findUserById).not.toHaveBeenCalled();
   });
 });

@@ -24,4 +24,16 @@ async function findUserByEmail(email) {
   return data;
 }
 
-module.exports = { createUser, findUserByEmail };
+async function findUserById(userId) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, email, name, created_at')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+module.exports = { createUser, findUserByEmail, findUserById };
