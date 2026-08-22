@@ -5,6 +5,7 @@ const {
   findCheckinByHabitAndDate,
   deleteCheckinByHabitAndDate,
   findCheckinsByHabit,
+  findCheckinsByHabits,
 } = require('../../src/models/checkin.model');
 
 function buildMock(resolvedData, resolvedError = null) {
@@ -14,6 +15,7 @@ function buildMock(resolvedData, resolvedError = null) {
     delete: jest.fn(() => chain),
     select: jest.fn(() => chain),
     eq: jest.fn(() => chain),
+    in: jest.fn(() => chain),
     order: jest.fn().mockResolvedValue(result),
     single: jest.fn().mockResolvedValue(result),
     maybeSingle: jest.fn().mockResolvedValue(result),
@@ -22,6 +24,8 @@ function buildMock(resolvedData, resolvedError = null) {
 }
 
 describe('checkin.model', () => {
+  afterEach(() => jest.clearAllMocks());
+
   test('createCheckin inserts into checkins and returns the created row', async () => {
     const fakeCheckin = { id: 'c1', habit_id: 'h1', date: '2026-08-20', completed: true };
     const mock = buildMock(fakeCheckin);
@@ -94,5 +98,34 @@ describe('checkin.model', () => {
 
     expect(mock.chain.eq).toHaveBeenCalledWith('habit_id', 'h1');
     expect(result).toEqual(fakeCheckins);
+  });
+
+  test('findCheckinsByHabits fetches every habit in one query', async () => {
+    const fakeCheckins = [
+      { id: 'c1', habit_id: 'h1', date: '2026-08-20', completed: true },
+      { id: 'c2', habit_id: 'h2', date: '2026-08-20', completed: true },
+    ];
+    const mock = buildMock(fakeCheckins);
+    getSupabaseClient.mockReturnValue(mock);
+
+    const result = await findCheckinsByHabits(['h1', 'h2']);
+
+    expect(mock.from).toHaveBeenCalledTimes(1);
+    expect(mock.chain.in).toHaveBeenCalledWith('habit_id', ['h1', 'h2']);
+    expect(result).toEqual(fakeCheckins);
+  });
+
+  test('findCheckinsByHabits does not touch the database for an empty list', async () => {
+    const mock = buildMock([]);
+    getSupabaseClient.mockReturnValue(mock);
+
+    await expect(findCheckinsByHabits([])).resolves.toEqual([]);
+    expect(getSupabaseClient).not.toHaveBeenCalled();
+  });
+
+  test('findCheckinsByHabits throws when Supabase returns an error', async () => {
+    getSupabaseClient.mockReturnValue(buildMock(null, { message: 'select failed' }));
+
+    await expect(findCheckinsByHabits(['h1'])).rejects.toThrow('select failed');
   });
 });
