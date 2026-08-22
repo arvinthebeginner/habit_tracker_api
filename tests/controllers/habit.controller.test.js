@@ -4,6 +4,7 @@ jest.mock('../../src/models/checkin.model');
 const {
   createCheckin,
   findCheckinByHabitAndDate,
+  deleteCheckinByHabitAndDate,
   findCheckinsByHabit,
 } = require('../../src/models/checkin.model');
 const {
@@ -224,6 +225,54 @@ describe('POST /api/habits/:id/checkin', () => {
   });
 });
 
+describe('DELETE /api/habits/:id/checkin', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('returns 204 when today check-in is removed', async () => {
+    findHabitById.mockResolvedValue({ id: HABIT_ID, user_id: 'u1' });
+    deleteCheckinByHabitAndDate.mockResolvedValue({ id: 'c1', habit_id: HABIT_ID });
+
+    const res = await request(app).delete(`/api/habits/${HABIT_ID}/checkin`).set(auth);
+
+    expect(res.status).toBe(204);
+    expect(res.body).toEqual({});
+  });
+
+  test('deletes today only, never an older check-in', async () => {
+    findHabitById.mockResolvedValue({ id: HABIT_ID, user_id: 'u1' });
+    deleteCheckinByHabitAndDate.mockResolvedValue({ id: 'c1' });
+
+    await request(app).delete(`/api/habits/${HABIT_ID}/checkin`).set(auth);
+
+    expect(deleteCheckinByHabitAndDate).toHaveBeenCalledWith(HABIT_ID, currentDate());
+  });
+
+  test('returns 404 when today has not been checked in', async () => {
+    findHabitById.mockResolvedValue({ id: HABIT_ID, user_id: 'u1' });
+    deleteCheckinByHabitAndDate.mockResolvedValue(null);
+
+    const res = await request(app).delete(`/api/habits/${HABIT_ID}/checkin`).set(auth);
+
+    expect(res.status).toBe(404);
+  });
+
+  test('returns 404 without deleting when the habit belongs to another user', async () => {
+    findHabitById.mockResolvedValue(null);
+
+    const res = await request(app).delete(`/api/habits/${HABIT_ID}/checkin`).set(auth);
+
+    expect(res.status).toBe(404);
+    expect(deleteCheckinByHabitAndDate).not.toHaveBeenCalled();
+  });
+
+  test('returns 401 without a token', async () => {
+    const res = await request(app).delete(`/api/habits/${HABIT_ID}/checkin`);
+
+    expect(res.status).toBe(401);
+    expect(deleteCheckinByHabitAndDate).not.toHaveBeenCalled();
+  });
+});
+
 describe('GET /api/habits/:id/checkins', () => {
   afterEach(() => jest.clearAllMocks());
 
@@ -308,6 +357,7 @@ describe('habit id validation', () => {
     ['PUT', (id) => request(app).put(`/api/habits/${id}`).send({ name: 'Lari pagi' })],
     ['DELETE', (id) => request(app).delete(`/api/habits/${id}`)],
     ['POST checkin', (id) => request(app).post(`/api/habits/${id}/checkin`)],
+    ['DELETE checkin', (id) => request(app).delete(`/api/habits/${id}/checkin`)],
     ['GET checkins', (id) => request(app).get(`/api/habits/${id}/checkins`)],
     ['GET stats', (id) => request(app).get(`/api/habits/${id}/stats`)],
   ])('%s returns 400 for an id that is not a UUID', async (_label, send) => {

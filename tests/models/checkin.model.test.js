@@ -3,6 +3,7 @@ const { getSupabaseClient } = require('../../src/config/db');
 const {
   createCheckin,
   findCheckinByHabitAndDate,
+  deleteCheckinByHabitAndDate,
   findCheckinsByHabit,
 } = require('../../src/models/checkin.model');
 
@@ -10,6 +11,7 @@ function buildMock(resolvedData, resolvedError = null) {
   const result = { data: resolvedData, error: resolvedError };
   const chain = {
     insert: jest.fn(() => chain),
+    delete: jest.fn(() => chain),
     select: jest.fn(() => chain),
     eq: jest.fn(() => chain),
     order: jest.fn().mockResolvedValue(result),
@@ -56,6 +58,31 @@ describe('checkin.model', () => {
     getSupabaseClient.mockReturnValue(buildMock(null));
 
     await expect(findCheckinByHabitAndDate('h1', '2026-08-20')).resolves.toBeNull();
+  });
+
+  test('deleteCheckinByHabitAndDate deletes only that habit on that date', async () => {
+    const fakeCheckin = { id: 'c1', habit_id: 'h1', date: '2026-08-20', completed: true };
+    const mock = buildMock(fakeCheckin);
+    getSupabaseClient.mockReturnValue(mock);
+
+    const result = await deleteCheckinByHabitAndDate('h1', '2026-08-20');
+
+    expect(mock.chain.delete).toHaveBeenCalled();
+    expect(mock.chain.eq).toHaveBeenCalledWith('habit_id', 'h1');
+    expect(mock.chain.eq).toHaveBeenCalledWith('date', '2026-08-20');
+    expect(result).toEqual(fakeCheckin);
+  });
+
+  test('deleteCheckinByHabitAndDate returns null when there was nothing to delete', async () => {
+    getSupabaseClient.mockReturnValue(buildMock(null));
+
+    await expect(deleteCheckinByHabitAndDate('h1', '2026-08-20')).resolves.toBeNull();
+  });
+
+  test('deleteCheckinByHabitAndDate throws when Supabase returns an error', async () => {
+    getSupabaseClient.mockReturnValue(buildMock(null, { message: 'delete failed' }));
+
+    await expect(deleteCheckinByHabitAndDate('h1', '2026-08-20')).rejects.toThrow('delete failed');
   });
 
   test('findCheckinsByHabit filters by habit id', async () => {

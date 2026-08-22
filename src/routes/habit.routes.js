@@ -8,6 +8,7 @@ const {
   update,
   remove,
   checkin,
+  removeCheckin,
   getCheckins,
   stats,
 } = require('../controllers/habit.controller');
@@ -15,7 +16,7 @@ const {
 const router = express.Router();
 router.use(requireAuth);
 
-// Dipasang sekali di sini, berlaku untuk semua route yang memakai :id.
+// Berlaku untuk semua route yang memakai :id.
 router.param('id', (req, res, next, id) => {
   try {
     validateUuid(id, 'habit id');
@@ -31,6 +32,7 @@ router.get('/:id', getOne);
 router.put('/:id', update);
 router.delete('/:id', remove);
 router.post('/:id/checkin', checkin);
+router.delete('/:id/checkin', removeCheckin);
 router.get('/:id/checkins', getCheckins);
 router.get('/:id/stats', stats);
 

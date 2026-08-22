@@ -8,6 +8,7 @@ const {
 const {
   createCheckin,
   findCheckinByHabitAndDate,
+  deleteCheckinByHabitAndDate,
   findCheckinsByHabit,
 } = require('../models/checkin.model');
 const { calculateStreak, calculateLongestStreak } = require('../utils/streak.util');
@@ -97,6 +98,29 @@ async function checkin(req, res, next) {
   }
 }
 
+// Hanya membatalkan check-in hari ini
+async function removeCheckin(req, res, next) {
+  try {
+    const habit = await findHabitById(req.params.id, req.user.id);
+    if (!habit) {
+      const err = new Error('Habit not found');
+      err.status = 404;
+      throw err;
+    }
+
+    const deleted = await deleteCheckinByHabitAndDate(habit.id, today());
+    if (!deleted) {
+      const err = new Error('No check-in for today');
+      err.status = 404;
+      throw err;
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getCheckins(req, res, next) {
   try {
     const habit = await findHabitById(req.params.id, req.user.id);
@@ -135,4 +159,14 @@ async function stats(req, res, next) {
   }
 }
 
-module.exports = { create, list, getOne, update, remove, checkin, getCheckins, stats };
+module.exports = {
+  create,
+  list,
+  getOne,
+  update,
+  remove,
+  checkin,
+  removeCheckin,
+  getCheckins,
+  stats,
+};

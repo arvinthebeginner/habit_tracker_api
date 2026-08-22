@@ -25,6 +25,20 @@ async function findCheckinByHabitAndDate(habitId, date) {
   return data;
 }
 
+async function deleteCheckinByHabitAndDate(habitId, date) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('checkins')
+    .delete()
+    .eq('habit_id', habitId)
+    .eq('date', date)
+    .select()
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 async function findCheckinsByHabit(habitId) {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
@@ -37,4 +51,9 @@ async function findCheckinsByHabit(habitId) {
   return data;
 }
 
-module.exports = { createCheckin, findCheckinByHabitAndDate, findCheckinsByHabit };
+module.exports = {
+  createCheckin,
+  findCheckinByHabitAndDate,
+  deleteCheckinByHabitAndDate,
+  findCheckinsByHabit,
+};
